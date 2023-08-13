@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>exe</OutputType>
+    <Nullable>enable</Nullable>
+    <StartupObject>TSETests.RealUsageTest</StartupObject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MSTest.TestFramework" Version="3.1.1"/>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.0"/>
+    <PackageReference Include="MSTest.TestAdapter" Version="3.1.1"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../TagSharpEngine/TagSharpEngine.csproj" />
+  </ItemGroup>
+</Project>
