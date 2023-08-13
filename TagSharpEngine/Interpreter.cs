@@ -55,9 +55,9 @@ namespace TagSharpEngine {
     public class Response {
         public string? Body;
         public Dictionary<string, object> Actions;
-        public Dictionary<string, Adapter> Variables;
+        public Dictionary<string, IAdapter> Variables;
 
-        public Response(Dictionary<string, Adapter> ?variables = null) { 
+        public Response(Dictionary<string, IAdapter> ?variables = null) { 
             Body = null;
             Variables = variables ?? new();
             Actions = new();
@@ -79,12 +79,9 @@ namespace TagSharpEngine {
     }
 
     public class Interpreter {
-        /// <summary>
-        /// IDK
-        /// </summary>
-        public List<Block> Blocks;
+        public List<IBlock> Blocks;
 
-        public Interpreter(List<Block> blocks) {
+        public Interpreter(List<IBlock> blocks) {
             Blocks = blocks;
         }
 
@@ -102,10 +99,10 @@ namespace TagSharpEngine {
             return new Context(node.Verb, response, this, originalMsg);
         }
 
-        private List<Block> GetAcceptors(Context ctx) {
-            var acceptors = new List<Block>();
+        private List<IBlock> GetAcceptors(Context ctx) {
+            var acceptors = new List<IBlock>();
 
-            foreach (Block block in Blocks) {
+            foreach (IBlock block in Blocks) {
                 if (block.WillAccept(ctx)) acceptors.Append(block);
             }
 
@@ -115,7 +112,7 @@ namespace TagSharpEngine {
         public string? ProcessBlocks(Context ctx, Node node) {
             var acceptors = GetAcceptors(ctx);
 
-            foreach (Block? b in acceptors) {
+            foreach (IBlock? b in acceptors) {
                 string? value = b.Process(ctx);
 
                 if (value is not null) {
@@ -198,7 +195,7 @@ namespace TagSharpEngine {
         public Response Process(
             string message, 
             int char_limit,
-            Dictionary<string, Adapter>? seed_var = null, 
+            Dictionary<string, IAdapter>? seed_var = null, 
             bool dot_param = false
         ) {
             var response = new Response(seed_var);
