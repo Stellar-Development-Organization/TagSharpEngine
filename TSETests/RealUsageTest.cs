@@ -7,10 +7,13 @@ namespace TSETests {
     public class RealUsageTest {
         public static void Main(string[] args) {
             var verb_var = new Verb("{hello:world}");
-            Console.WriteLine("Hi");
+            Console.WriteLine(verb_var.ToString());
 
-            var finalize = $"{verb_var.Declaration}({verb_var.Parameter}):{verb_var.Payload}";
-            Console.WriteLine(finalize);
+            var verb_no_pl = new Verb("{test}");
+            Console.WriteLine(verb_no_pl.ToString());
+
+            var full_verb = new Verb("{test(param):hello}");
+            Console.WriteLine(full_verb.ToString());
         }
     }
 
