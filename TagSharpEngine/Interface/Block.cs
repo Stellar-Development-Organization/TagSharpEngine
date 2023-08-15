@@ -2,9 +2,9 @@
     /// <summary>
     /// The base interface for making a custom block in TagScript.
     /// </summary>
-    public abstract class Block {
-        public List<string>? AcceptedNames;
-
+    public interface IBlock { 
+        public IEnumerable<string>? AcceptedNames { get; set; }
+        
         public virtual bool WillAccept(Context ctx) {
             var dec = ctx.Verb.Declaration?.ToLower();
             if (dec is null || AcceptedNames is null) return false;
