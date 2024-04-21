@@ -3,9 +3,9 @@ using TagSharpEngine.Interface;
 
 namespace TagSharpEngine {
     public class Node {
-        public string Output = string.Empty.ToString();
-        public Verb? Verb;
-        public Tuple<int, int> Coordinates;
+        public string? Output { get; set; }
+        public Verb? Verb { get; set; }
+        public Tuple<int, int> Coordinates { set; get; }
 
         public Node(Tuple<int, int> coordinates, Verb? verb = null) {
             Verb = verb;
@@ -17,32 +17,26 @@ namespace TagSharpEngine {
         }
 
         public static List<Node> BuildNodeTree(string message) {
-            ///
             List<Node> nodes = new();
             string previous = @"";
 
             List<int> starts = new();
-
             for (int i = 0; i < message.Length; i++) {
                 char ch = message[i];
 
-                switch (ch) {
-                    case '{' when previous != @"\\":
-                        starts.Add(i);
-                        break;
+                if (ch == '{' && previous != "\\") {
+                    starts.Add(i);
+                }
 
-                    case '}' when previous != @"\\":
-                        if (starts.Count == 0) {
-                            continue;
-                        }
+                if (ch == '}' && previous != "\\") {
+                    if (starts.Count == 0) {
+                        continue;
+                    }
 
-                        int val = starts[^1];
-                        starts.RemoveAt(starts.Count - 1);
+                    int start = starts[^1];
+                    starts.RemoveAt(starts.Count - 1);
 
-                        Tuple<int, int> coordinates = new(val, i);
-                        Node node = new(coordinates);
-                        nodes.Add(node);
-                        break;
+                    nodes.Add(new Node((start, i).ToTuple(), null));
                 }
 
                 previous = ch.ToString();
@@ -57,7 +51,7 @@ namespace TagSharpEngine {
         public Dictionary<string, object> Actions;
         public Dictionary<string, IAdapter> Variables;
 
-        public Response(Dictionary<string, IAdapter> ?variables = null) { 
+        public Response(Dictionary<string, IAdapter>? variables = null) { 
             Body = null;
             Variables = variables ?? new();
             Actions = new();
@@ -78,42 +72,49 @@ namespace TagSharpEngine {
         }
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
     public class Interpreter {
-        public List<IBlock> Blocks;
+        public List<IBaseBlock> Blocks { get; set; }
 
-        public Interpreter(List<IBlock> blocks) {
+        public Interpreter(List<IBaseBlock> blocks) {
             Blocks = blocks;
         }
 
         private Context GetContext(
             Node node, 
-            string final, 
-            Response response, 
-            string originalMsg, 
-            int verbLimit, 
+            string final,
+            Response response,
+            string originalMessage,
+            int verbLimit,
             bool dotParam
         ) {
-
-            var (start, ends) = node.Coordinates;
-            node.Verb = new Verb(final.Substring(start, ends + 1), verbLimit, dotParam);
-            return new Context(node.Verb, response, this, originalMsg);
+            var (start, end) = node.Coordinates;
+            Console.WriteLine((start, end));
+            node.Verb = new Verb(final.Substring(start, end + 1), limit: verbLimit, dotParam: dotParam);
+            
+            return new Context(node.Verb, response, this, originalMessage);
         }
 
-        private List<IBlock> GetAcceptors(Context ctx) {
-            var acceptors = new List<IBlock>();
+        private List<IBaseBlock> GetAcceptors(Context ctx) {
+            List<IBaseBlock> acceptors = new();
+            foreach (var block in Blocks) {
+                var result = block.WillAccept(ctx);
+                Console.WriteLine(result);
 
-            foreach (IBlock block in Blocks) {
-                if (block.WillAccept(ctx)) acceptors.Append(block);
+                if (result) {
+                    acceptors.Add(block);
+                }
             }
 
             return acceptors;
         }
 
-        public string? ProcessBlocks(Context ctx, Node node) {
+        private async Task<string?> ProcessBlocks(Context ctx, Node node) {
             var acceptors = GetAcceptors(ctx);
-
-            foreach (IBlock? b in acceptors) {
-                string? value = b.Process(ctx);
+            foreach (var block in acceptors) {
+                string? value = await block.Process(ctx);
 
                 if (value is not null) {
                     node.Output = value;
@@ -124,59 +125,59 @@ namespace TagSharpEngine {
             return null;
         }
 
-        private static int CheckWorkLoad(int charLimit, int totalWork, string output) {
-            totalWork += output.Length;
-            if (totalWork > charLimit) throw new CharLimitExceeded("The workload characters exceeded the limit."); 
+        private static int CheckWorkLoad(int limit, int total, string output) {
+            total += output.Length;
+            if (total > limit) {
+                throw new CharLimitExceeded("The TSE interpreter exceeded the workload.");
+            }
 
-            return totalWork;
+            return total;
         }
 
-        private static Tuple<string, int> TextDeform(int start, int end, string final, string output) {
-            var msgSlice = end + 1 - start;
-            int replacement = output.Length;
+        private static Tuple<string, int> TextDeform(int start, int end, string finalString, string output) {
+            var msgLen = end + 1 - start;
+            var replaceLen = output.Length;
 
-            var differ = replacement - msgSlice;
-            final = final.Substring(0, start) + output + final.Substring(end, 1);
+            int diff = replaceLen - msgLen;
+            finalString = finalString[..start] + output + finalString[(end + 1)..];
 
-            return (final, differ).ToTuple();
+            return (finalString, diff).ToTuple();
         }
 
-        private static void TranslateNodes(List<Node> nodeList, int index, int start, int differ) {
-            for (int i = index + 1; i < nodeList.Count; i++) {
-                Node futureNode = nodeList[i];
+        private static void TranslateNodes(List<Node> nodes, int index, int start, int diff) {
+            for (int i = index + 1; i < nodes.Count; i++) {
+                Node future = nodes[i];
                 int newStart, newEnd;
 
-                newStart = futureNode.Coordinates.Item1 > start ? 
-                futureNode.Coordinates.Item1 + differ : futureNode.Coordinates.Item1;
+                newStart = future.Coordinates.Item1 > start ? future.Coordinates.Item1 + diff : future.Coordinates.Item1;
+                newEnd = future.Coordinates.Item2 > start ? future.Coordinates.Item2 + diff : future.Coordinates.Item2;
 
-                newEnd = futureNode.Coordinates.Item2 > start ?
-                futureNode.Coordinates.Item2 + differ : futureNode.Coordinates.Item2;
-
-                futureNode.Coordinates = (newStart, newEnd).ToTuple();
+                future.Coordinates = (newStart, newEnd).ToTuple();
             }
         }
 
-        private string Solve(
-            string msg, 
-            List<Node> nodeList, 
-            Response response, 
+        private async Task<string> Solve(
+            string message, 
+            List<Node> nodes, 
+            Response resp, 
             int charLimit, 
             bool dotParam,
             int verbLimit = 2000
         ) {
             int totalWork = 0;
-            string final = msg;
+            string finalMsg = message;
 
-            for (int i = 0; i < nodeList.Count; i++) {
-                Node node = nodeList[i];
-                var (start, ends) = node.Coordinates;
-                var ctx = GetContext(node, final, response, msg, verbLimit, dotParam);
+            for (int i = 0; i < nodes.Count; i++) {
+                Node node = nodes[i];
+                var (start, end) = node.Coordinates;
+
+                Context ctx = GetContext(node, finalMsg, resp, message, verbLimit, dotParam);
                 string? output;
 
                 try {
-                    output = ProcessBlocks(ctx, node);
+                    output = await ProcessBlocks(ctx, node);
                 } catch (StopError exc) {
-                    return final.Substring(0, start) + exc.Message;
+                    return finalMsg[..start] + exc.Message;
                 }
 
                 if (output is null) {
@@ -184,38 +185,43 @@ namespace TagSharpEngine {
                 }
 
                 totalWork = CheckWorkLoad(charLimit, totalWork, output);
-                var (finalize, differ) = TextDeform(start, ends, final, output);
-                final = finalize;
-                TranslateNodes(nodeList, i, start, differ);
+                var (final, diff) = TextDeform(start, end, finalMsg, output);
+
+                finalMsg = final;
+                TranslateNodes(nodes, i, start, diff);
             }
 
-            return final;
+            return finalMsg;
         }
 
-        public Response Process(
-            string message, 
-            int char_limit,
-            Dictionary<string, IAdapter>? seed_var = null, 
-            bool dot_param = false
+        /// <summary>
+        /// Process the TagScript message given by user.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<Response> Process(
+            string message,
+            int charLimit,
+            Dictionary<string, IAdapter>? seedVar = null,
+            bool dotParam = false
         ) {
-            var response = new Response(seed_var);
-            List<Node> node_build_list = Node.BuildNodeTree(message);
+            Response response = new(seedVar);
+            List<Node> nodes = Node.BuildNodeTree(message);
 
             string output;
-            
+
             try {
-                output = Solve(message, node_build_list, response, char_limit, dot_param);
-            } catch (TagSharpError exc) {
-                throw exc;
+                output = await Solve(message, nodes, response, charLimit, dotParam);
+            } catch (TagSharpError) {
+                throw;
             } catch (Exception exc) {
                 throw new ProcessError(exc, response, this);
             }
-            
+
             return ReturnResponse(response, output);
         }
 
         private static Response ReturnResponse(Response response, string output) {
-            response.Body = response.Body is not null ? response.Body.Trim() : output.Trim();
+            response.Body = response.Body is null ? output.Trim() : response.Body.Trim();
             return response;
         }
     }

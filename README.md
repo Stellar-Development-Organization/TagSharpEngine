@@ -13,7 +13,7 @@ Download the latest stable version via .NET client:
 
 Or you can add via PackageReference:
 ```xml
-<PackageReference Include="TagScriptSharp118" Version="" />  <!-- Put the version in string -->
+<PackageReference Include="TagScriptSharp118" Version="0.1.0" />  <!-- Put the version in string -->
 ```
 
 # Usage

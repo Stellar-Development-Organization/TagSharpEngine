@@ -2,7 +2,7 @@
     /// <summary>
     /// The base interface for making a custom block in TagScript.
     /// </summary>
-    public interface IBlock { 
+    public interface IBaseBlock { 
         public IEnumerable<string>? AcceptedNames { get; set; }
         
         public virtual bool WillAccept(Context ctx) {
@@ -12,17 +12,8 @@
             return AcceptedNames.Contains(dec);
         }
 
-        public virtual object? PreProcess(Context ctx) {
-            return null;
-        }
-
-        public virtual string? Process(Context ctx) {
+        public virtual Task<string?> Process(Context ctx) {
             throw new NotImplementedException();
-        }
-
-        public virtual object? PostProcess(Context ctx) {
-            // No use of it yet.
-            return null;
         }
     }
 }

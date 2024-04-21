@@ -17,6 +17,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Blocks\MathBlock.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Adapters\" />
     <Folder Include="Block\" />
   </ItemGroup>
@@ -30,6 +34,11 @@
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
+    <None Include="Blocks\MathBlock.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="irony" Version="1.2.0" />
   </ItemGroup>
 
 </Project>

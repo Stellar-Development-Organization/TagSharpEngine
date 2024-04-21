@@ -1,15 +1,11 @@
-﻿using System;
-using System.Data;
-using System.Diagnostics;
-
-namespace TagSharpEngine {
+﻿namespace TagSharpEngine {
     public class Verb {
         public string? Declaration;
         public string? Payload;
         public string? Parameter;
 
         private int DecStart, DecDepth;
-        private string ParsedString = "";
+        private string ParsedString = string.Empty;
 
         public Verb(string? verbString = null, int limit = 2000, bool dotParam = false) {
             if (verbString is null) return;
@@ -21,15 +17,10 @@ namespace TagSharpEngine {
             DecDepth = DecStart = 0;
 
             string parsing = verbString[1..^1];
-            ParsedString = parsing.Substring(0, Math.Min(limit, parsing.Length));
+            ParsedString = parsing[..Math.Min(limit, parsing.Length)];
             bool SkipNext = false;
 
             for (int i = 0; i < ParsedString.Length; i++) {
-                if (SkipNext) {
-                    SkipNext = false;
-                    continue;
-                }
-
                 char ch = ParsedString[i];
                 if (SkipNext) {
                     SkipNext = false;
@@ -39,7 +30,7 @@ namespace TagSharpEngine {
                     continue;
                 }
 
-                if (ch == ':' && DecDepth != 0) {
+                if (ch == ':' && DecDepth == 0) {
                     SetPayload();
                     return;
                 } else if (ParseParameter(i, ch)) {
@@ -51,7 +42,7 @@ namespace TagSharpEngine {
         }
 
         private void SetPayload() {
-            string[] parsed = ParsedString.Split(':', 1);
+            string[] parsed = ParsedString.Split(':', 2);
 
             if (parsed.Length == 2) {
                 Payload = parsed[1];
